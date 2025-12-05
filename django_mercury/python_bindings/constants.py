@@ -106,3 +106,29 @@ MAX_VALUES: Final[Dict[str, int]] = {
     "OPERATION_NAME_LENGTH": 256,
     "ACTIVE_MONITORS": 2048,
 }
+
+DEFAULT_THRESHOLDS: Final[Dict[str, Dict[str, float]]] = {
+    "response_time": {
+        "fast": 100,        
+        "normal": 500,      
+        "slow": 1000,      
+        "critical": 3000,  
+    },
+    "queries": {
+        "efficient": 5,     
+        "normal": 20,       
+        "excessive": 50,   
+    },
+    "memory_mb": {
+        "efficient": 10,    
+        "normal": 50,      
+        "high": 100,       
+    },
+    "cache_hit_ratio": {
+        "excellent": 0.9,  
+        "good": 0.7,        
+        "poor": 0.5,        
+    },
+}
+
+
