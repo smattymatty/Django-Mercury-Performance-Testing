@@ -4,6 +4,9 @@
 # --- Standard Library Imports ---
 import json
 from typing import Any, Dict, Optional, Union, Callable
+from django.conf import settings
+import copy
+from .constants import DEFAULT_THRESHOLDS
 
 # --- Third-Party Imports ---
 from rest_framework.test import APITestCase
@@ -34,6 +37,31 @@ except ImportError:
     get_logger = lambda name: logging.getLogger(name)
 
 logger = get_logger("django_integration")
+
+def _deep_merge(dest: dict, src: dict):
+    """
+    Recursively merge src into dest.
+    """
+    for key, val in src.items():
+        if key in dest and isinstance(dest[key], dict) and isinstance(val, dict):
+            _deep_merge(dest[key], val)
+        else:
+            dest[key] = val
+
+
+def get_performance_thresholds():
+    """
+    Return a merged dict: DEFAULT_THRESHOLDS overridden by
+    settings.MERCURY_PERFORMANCE_THRESHOLDS if available.
+    """
+    user_thresholds = getattr(settings, "MERCURY_PERFORMANCE_THRESHOLDS", {}) or {}
+    merged = copy.deepcopy(DEFAULT_THRESHOLDS)
+    _deep_merge(merged, user_thresholds)
+    return merged
+
+
+
+
 
 # --- Base Performance Test Case ---
 
