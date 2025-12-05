@@ -196,7 +196,36 @@ class DjangoMercuryAPITestCase(DjangoPerformanceAPITestCase):
 
     Key Principle: Mercury class is TEMPORARY, Performance class is FOREVER.
     """
+    MERCURY_OVERRIDE_THRESHOLDS: dict = {}
 
+    def get_override_thresholds(self) -> dict:
+        """
+        Returns the merged thresholds combining defaults, class-level, 
+        and method-level overrides (method-level takes precedence).
+        """
+        # Start with default thresholds
+        thresholds = DEFAULT_THRESHOLDS.copy()
+
+        # Merge class-level overrides if present
+        if hasattr(self, "MERCURY_OVERRIDE_THRESHOLDS"):
+            thresholds.update(self.MERCURY_OVERRIDE_THRESHOLDS)
+
+        # Merge method-level overrides if set
+        method_override = getattr(self, "_mercury_method_override", {})
+        thresholds.update(method_override)
+
+        return thresholds
+
+    def override_thresholds(self, **kwargs):
+        """
+        Method-level threshold override API.
+        Example usage:
+            self.override_thresholds(response_time={"fast": 50})
+        """
+        self._mercury_method_override = kwargs
+
+
+    
     # Class-level configuration - Optimized for learning
     _mercury_enabled = True
     _auto_scoring = True  # Show grade to understand performance level
