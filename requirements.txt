@@ -1,0 +1,29 @@
+# Core Dependencies
+Django>=3.2,<6.0
+djangorestframework>=3.12.0
+
+# Performance Testing Dependencies
+psutil>=5.8.0  # For system metrics
+memory-profiler>=0.60.0  # For memory profiling
+
+# Optional Dependencies for Enhanced Features
+colorlog>=6.6.0  # For colored logging output
+rich>=12.0.0  # For rich terminal output (optional)
+jsonschema>=4.0.0  # For configuration validation
+
+# Development Dependencies
+pytest>=7.0.0
+pytest-cov>=3.0.0
+coverage>=6.0.0  # For test_runner.py coverage support
+black>=22.0.0  # Code formatting
+isort>=5.10.0  # Import sorting
+mypy>=0.950  # Type checking
+flake8>=4.0.0  # Linting
+
+# Optional Performance Analysis Tools (complementary)
+django-debug-toolbar>=3.2.0  # For development debugging
+django-silk>=4.3.0  # For profiling (optional)
+
+# Documentation
+sphinx>=4.5.0
+sphinx-rtd-theme>=1.0.0
