@@ -239,23 +239,13 @@ if [ ! -f "MANIFEST.in" ]; then
     exit 1
 fi
 
-# Extract versions
+# Extract version from pyproject.toml (single source of truth)
 PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-INIT_VERSION=$(grep '^__version__ = ' django_mercury/__init__.py | sed "s/__version__ = ['\"]\\([^'\"]*\\)['\"].*/\\1/")
 
 echo_info "pyproject.toml version: $PYPROJECT_VERSION"
-echo_info "__init__.py version: $INIT_VERSION"
+echo_info "(__init__.py reads version dynamically from package metadata)"
 
-# Check version consistency
-if [ "$PYPROJECT_VERSION" != "$INIT_VERSION" ]; then
-    echo_error "Version mismatch detected!"
-    echo_error "  pyproject.toml: $PYPROJECT_VERSION"
-    echo_error "  __init__.py: $INIT_VERSION"
-    echo_error "Please update both files to have the same version number"
-    exit 1
-fi
-
-echo_success "Version consistency check passed: $PYPROJECT_VERSION"
+echo_success "Version check passed: $PYPROJECT_VERSION"
 
 # Check if version is already on PyPI
 check_pypi_version() {

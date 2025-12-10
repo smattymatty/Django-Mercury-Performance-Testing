@@ -3,6 +3,13 @@
 Fresh start with clean architecture.
 """
 
-__version__ = "0.1.0"
+from .monitor import MonitorResult, monitor
 
-__all__ = ["__version__"]
+# Version is managed in pyproject.toml - read dynamically
+try:
+    from importlib.metadata import version
+    __version__ = version("django-mercury-performance")
+except Exception:
+    __version__ = "unknown"
+
+__all__ = ["__version__", "monitor", "MonitorResult"]

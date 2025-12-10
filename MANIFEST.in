@@ -1,0 +1,21 @@
+# Django Mercury MANIFEST.in - Pure Python package
+# Controls what files get included in the distribution
+
+# Include package metadata
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include pyproject.toml
+
+# Include package data
+recursive-include django_mercury *.py
+recursive-include tests *.py
+
+# Exclude build artifacts
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*

@@ -1,280 +1,467 @@
-# Django Mercury
+# Django Mercury Performance Testing
 
 [![PyPI version](https://badge.fury.io/py/django-mercury-performance.svg)](https://badge.fury.io/py/django-mercury-performance)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Django 3.2-5.1](https://img.shields.io/badge/django-3.2--5.1-green.svg)](https://docs.djangoproject.com/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-red.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Built for: EduLite](https://img.shields.io/badge/Built%20for-EduLite-orange)](https://github.com/ibrahim-sisar/EduLite)
-[![Values: Open](https://img.shields.io/badge/Values-Open%20%7C%20Free%20%7C%20Fair-purple)](https://github.com/80-20-Human-In-The-Loop)
 
-**Part of the [80-20 Human in the Loop](https://github.com/80-20-Human-In-The-Loop) ecosystem**
+**Simple, powerful performance monitoring for Django tests.**
 
-> **Test Django app speed. Learn why it's slow. Fix it.**
+```python
+from django_mercury import monitor
 
-Django Mercury is a performance testing framework that adapts to your experience level - teaching beginners, empowering experts, and enabling automation while preserving human understanding.
+with monitor(response_time=100) as result:
+    response = client.get('/api/users/')
+# Automatic threshold checking - raises AssertionError on violations
+```
 
-## ⚡ Quick Start
+The monitor created a new test case under the hood, failing it looks like:
 
-### Install
+```sh
+============================================================
+MERCURY PERFORMANCE REPORT
+============================================================
+
+🧪 Test: AuthEndpointPerformance.test_login_under_100ms
+📍 Location: accounts/tests/mercury/test_auth_performance.py:20
+
+📊 METRICS:
+   Response time: 568.43ms (threshold: 100.00ms)
+   Query count:   11 (threshold: 10)
+
+✅ No N+1 patterns detected
+
+❌ FAILURES:
+   ⏱️  Response time 568.43ms exceeded threshold 100ms (+468.43ms over)
+   🔢 Query count 11 exceeded threshold 10 (+1 extra queries)
+
+============================================================
+```
+
+10 is the dafeult query count, but can be changed:
+
+```python
+with monitor(response_time_ms=10, query_count=5) as result:
+            response = self.client.get('/api/v1/auth/tokens/')
+result.explain() # print what the monitor found
+```
+
+If you aren't failing the mercury test, but you still want to see the stats monitored - use `.explain()`
+
+```sh
+============================================================
+MERCURY PERFORMANCE REPORT
+============================================================
+
+🧪 Test: AuthEndpointPerformance.test_auth_me_under_50ms
+📍 Location: accounts/tests/mercury/test_auth_performance.py:32
+
+📊 METRICS:
+   Response time: 6.86ms (threshold: 50.00ms)
+   Query count:   3 (threshold: 10)
+
+✅ No N+1 patterns detected
+
+============================================================
+```
+
+No failure - but still useful information to help you understand your project, and tweak the performance thresholds.
+
+## Why Mercury?
+
+**Most performance tools just detect problems.** Mercury explains them in your test output, with clear context and actionable fixes.
+
+**No configuration required.** Works out of the box with sensible defaults. Customize when you need to.
+
+**Built for real Django projects.** Detects N+1 queries, slow responses, and excessive database calls automatically.
+
+## Installation
+
 ```bash
 pip install django-mercury-performance
 ```
 
-### Choose Your Profile
+## Quick Start
 
-Mercury adapts to three audiences through its plugin system:
-
-```bash
-# 🎓 Students - Learn while testing
-mercury-test --profile student
-
-# 💼 Experts - Fast and efficient
-mercury-test --profile expert
-
-# 🤖 Agents - Structured output for CI/CD
-mercury-test --profile agent
-```
-
-### Write Your First Test
+### Basic Usage
 
 ```python
-# For investigation and learning
-from django_mercury import DjangoMercuryAPITestCase
+from django_mercury import monitor
+from django.test import TestCase
 
-class QuickCheck(DjangoMercuryAPITestCase):
-    """Mercury automatically monitors all tests in this class."""
-    
-    def test_user_api(self):
-        response = self.client.get('/api/users/')
-        # Mercury detects issues and explains them!
-
-# For production with specific assertions
-from django_mercury import DjangoPerformanceAPITestCase
-from django_mercury import monitor_django_view
-
-class ProductionTests(DjangoPerformanceAPITestCase):
-    """Enforce performance standards."""
-    
-    def test_user_api_performance(self):
-        with monitor_django_view("user_api") as monitor:
+class UserAPITest(TestCase):
+    def test_user_list_performance(self):
+        """Monitor performance with zero configuration."""
+        with monitor() as result:
             response = self.client.get('/api/users/')
-        
-        self.assertResponseTimeLess(monitor, 100)  # Must be under 100ms
-        self.assertQueriesLess(monitor, 10)        # Max 10 queries
-        self.assertNoNPlusOne(monitor)             # No N+1 patterns
+
+        # If thresholds exceeded, AssertionError with full report is raised
+        # Otherwise, check metrics manually:
+        print(f"Response time: {result.response_time_ms:.2f}ms")
+        print(f"Queries: {result.query_count}")
 ```
 
-## 🔌 Plugin Architecture
+### Custom Thresholds
 
-Mercury uses a **small core, big plugin** design that enables different experiences:
+```python
+# Override defaults inline
+with monitor(response_time_ms=50, query_count=5) as result:
+    response = self.client.get('/api/users/')
 
-```bash
-mercury-test --list-plugins
+# Or configure per-file
+MERCURY_PERFORMANCE_THRESHOLDS = {
+    'response_time_ms': 100,
+    'query_count': 10,
+    'n_plus_one_threshold': 8,
+}
 
-Available Plugins:
-✅ discovery - Smart Django project finding
-✅ wizard - Interactive test selection (students)
-✅ learn - Quizzes and tutorials (students)
-✅ hints - Performance tips (students)
-```
-
-Each profile automatically configures the right plugins:
-- **Student**: All educational plugins enabled
-- **Expert**: Minimal plugins for speed
-- **Agent**: Non-interactive with JSON output
-
-[Learn more about the plugin system →](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Why-Plugins)
-
-## 📊 What Mercury Shows You
-
-### 🎓 Student Mode - Educational Output
-```
-📚 LEARNING MOMENT DETECTED
-═══════════════════════════════════════════════════════
-Found: N+1 Query Pattern
-Location: UserSerializer.get_profile_data()
-
-📖 What's happening:
-Your code makes 1 query to get users, then 1 query
-per user to get profiles. With 100 users = 101 queries!
-
-💡 Why this matters:
-Each query adds ~2ms overhead. This gets slower as
-your data grows.
-
-🔧 How to fix:
-Add .select_related('profile') to your queryset:
-  User.objects.select_related('profile').all()
-
-📚 Want to learn more?
-Run: mercury-test --learn n1-queries
-```
-
-### 💼 Expert Mode - Concise Results
-```
-test_user_list     156ms  45q  23MB  ⚠️ N+1@L45  SLOW
-test_user_detail    23ms   3q  12MB  ✅         PASS
-
-Critical: N+1 in views.py:45. Fix: select_related('profile')
-```
-
-### 🤖 Agent Mode - Structured JSON
-```json
-{
-  "test": "test_user_list",
-  "metrics": {
-    "response_time_ms": 156,
-    "queries": 45,
-    "memory_mb": 23
-  },
-  "issues": [{
-    "type": "n_plus_one",
-    "severity": "high",
-    "location": "views.py:45",
-    "auto_fixable": false,
-    "requires_human_review": true
-  }]
+# Or in Django settings.py
+MERCURY_PERFORMANCE_THRESHOLDS = {
+    'response_time_ms': 200,
+    'query_count': 20,
+    'n_plus_one_threshold': 10,
 }
 ```
 
-## 🎓 Educational Features
+**Configuration hierarchy:** Inline > File-level > Django settings > Defaults
 
-Mercury doesn't just find problems - it teaches you to understand them:
+### Detailed Reports
 
-### Interactive Learning
+```python
+with monitor() as result:
+    response = self.client.get('/api/users/')
+
+# Print full performance breakdown
+result.explain()
+```
+
+**Example output:**
+
+```
+============================================================
+MERCURY PERFORMANCE REPORT
+============================================================
+
+📊 METRICS:
+   Response time: 156.32ms (threshold: 100ms)
+   Query count:   45 (threshold: 10)
+
+🔄 N+1 PATTERNS DETECTED:
+   ❌ FAIL [23x] SELECT * FROM "auth_user" WHERE "id" = ?
+        → SELECT * FROM "auth_user" WHERE "id" = 1
+        → SELECT * FROM "auth_user" WHERE "id" = 2
+        → SELECT * FROM "auth_user" WHERE "id" = 3
+
+   ⚠️  WARN [8x] SELECT * FROM "user_profile" WHERE "user_id" = ?
+
+❌ FAILURES:
+   ⏱️  Response time 156.32ms exceeded threshold 100ms (+56.32ms over)
+   🔢 Query count 45 exceeded threshold 10 (+35 extra queries)
+   🔄 N+1 pattern detected: 23 similar queries (threshold: 10)
+      Pattern: SELECT * FROM "auth_user" WHERE "id" = ?
+
+============================================================
+```
+
+## What Gets Monitored
+
+### Response Time
+Measures end-to-end execution time using high-precision `perf_counter()`.
+
+**Default threshold:** 200ms
+
+### Query Count
+Tracks all database queries executed during the monitored block using Django's `CaptureQueriesContext`.
+
+**Default threshold:** 20 queries
+
+### N+1 Query Detection
+Automatically normalizes SQL queries and detects repeated patterns:
+
+```sql
+-- These are detected as the same pattern:
+SELECT * FROM users WHERE id = 1
+SELECT * FROM users WHERE id = 2
+SELECT * FROM users WHERE id = 999
+
+-- Normalized to:
+SELECT * FROM users WHERE id = ?
+```
+
+**Detection levels:**
+- **Failure:** Count >= threshold (default: 10)
+- **Warning:** Count >= 80% of threshold
+- **Notice:** Count >= 50% of threshold (minimum 3)
+
+### Smart SQL Normalization
+Handles:
+- String literals: `'hello'` → `?`
+- Numbers: `123`, `45.67` → `?`
+- UUIDs: `'550e8400-e29b-41d4-a716-446655440000'` → `?`
+- IN clauses: `IN (1, 2, 3)` → `IN (?)`
+- Boolean values: `TRUE`, `FALSE` → `?`
+
+## Configuration Options
+
+```python
+MERCURY_PERFORMANCE_THRESHOLDS = {
+    # Response time in milliseconds
+    'response_time_ms': 200,
+
+    # Maximum number of queries
+    'query_count': 20,
+
+    # N+1 pattern failure threshold
+    'n_plus_one_threshold': 10,
+}
+```
+
+**Priority order (highest to lowest):**
+1. **Inline:** `monitor(response_time_ms=100)`
+2. **File-level:** `MERCURY_PERFORMANCE_THRESHOLDS` in test module
+3. **Django settings:** `settings.MERCURY_PERFORMANCE_THRESHOLDS`
+4. **Defaults:** Built-in sensible values
+
+## Advanced Usage
+
+### Inspect Results Programmatically
+
+```python
+with monitor() as result:
+    response = self.client.get('/api/users/')
+
+# Access metrics
+assert result.response_time_ms < 100
+assert result.query_count <= 10
+assert len(result.n_plus_one_patterns) == 0
+
+# Export to JSON
+metrics = result.to_dict()
+```
+
+### Custom Assertions
+
+```python
+from django_mercury import monitor
+
+with monitor() as result:
+    response = self.client.get('/api/users/')
+
+# Custom business logic
+if result.query_count > 15 and len(result.n_plus_one_patterns) > 0:
+    result.explain()
+    raise AssertionError("Too many queries with N+1 patterns detected")
+```
+
+### Disable Auto-Failures (Manual Checking)
+
+```python
+# Catch the exception to prevent test failure
+try:
+    with monitor() as result:
+        response = self.client.get('/api/users/')
+except AssertionError as e:
+    # Full report is in the exception
+    print(e)
+    # Decide what to do...
+```
+
+## Architecture
+
+Mercury follows SOLID principles with clean separation of concerns:
+
+**Core Modules:**
+- `monitor.py` - Context manager orchestration
+- `config.py` - 4-layer threshold resolution
+- `n_plus_one.py` - SQL normalization and pattern detection
+
+**Design Principles:**
+- **Pure functions** for easy testing
+- **Immutable dataclasses** for results
+- **No side effects** except Django query capture
+- **Type hints** throughout
+- **Zero dependencies** beyond Django
+
+## Real-World Example
+
+```python
+from django_mercury import monitor
+from django.test import TestCase
+from myapp.models import User
+
+class UserAPIPerformanceTest(TestCase):
+    def setUp(self):
+        # Create test data
+        User.objects.bulk_create([
+            User(username=f'user{i}') for i in range(100)
+        ])
+
+    def test_user_list_without_optimization(self):
+        """This will fail - demonstrates N+1 problem."""
+        with monitor(query_count=5) as result:
+            # Bad: N+1 queries (1 + 100 profile lookups)
+            users = User.objects.all()
+            for user in users:
+                _ = user.profile.bio  # Triggers query per user
+
+        # AssertionError raised with N+1 pattern details
+
+    def test_user_list_with_optimization(self):
+        """This passes - select_related prevents N+1."""
+        with monitor(query_count=5) as result:
+            # Good: 1 query with JOIN
+            users = User.objects.select_related('profile').all()
+            for user in users:
+                _ = user.profile.bio  # No additional queries
+
+        # ✅ Passes threshold checks
+```
+
+## Testing Mercury Itself
+
+Mercury has comprehensive test coverage:
+
 ```bash
-# Start learning mode
-mercury-test --learn
+# Run all tests
+python -m unittest discover tests
 
-# Take quizzes
-mercury-test --learn --quiz
+# Run specific test module
+python -m unittest tests.test_monitor
 
-# Get step-by-step tutorials
-mercury-test --learn n1-queries
+# With coverage
+coverage run -m unittest discover tests
+coverage report
 ```
 
-### Progress Tracking
+**Current test suite:**
+- 46 tests covering all core functionality
+- Unit tests for pure functions
+- Integration tests for Django components
+- Edge case validation
+
+## Contributing
+
+We welcome contributions! Mercury is designed for extensibility:
+
+### Project Structure
+```
+django_mercury/
+├── __init__.py          # Public API exports
+├── monitor.py           # Main context manager (400 lines)
+├── config.py            # Threshold resolution (78 lines)
+└── n_plus_one.py        # Pattern detection (96 lines)
+
+tests/
+├── test_monitor.py      # Monitor tests (27 tests)
+├── test_config.py       # Config tests (5 tests)
+└── test_n_plus_one.py   # N+1 tests (9 tests)
+```
+
+### Development Setup
 ```bash
-mercury-test --learn --progress
+# Clone repo
+git clone https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing.git
+cd Django-Mercury-Performance-Testing
 
-📊 YOUR PROGRESS
-═══════════════════════════════════════
-Level: Intermediate (750 XP)
-Topics Mastered: N+1 Queries ✅, Indexing ✅
-Currently Learning: Caching (70%)
-Next Goal: Complete Caching module
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+python -m unittest discover tests
+
+# Format code
+black django_mercury tests --line-length 100
+isort django_mercury tests --profile black
 ```
 
-### Real-time Teaching
-When Mercury finds issues, it explains them in context, shows why they matter, and teaches you how to fix them.
+### Code Standards
+- **Type hints required** for all new code
+- **Pure functions** preferred for testability
+- **Docstrings** with examples for public APIs
+- **Tests** for all new functionality
 
-## 🚀 Performance Grading
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-Mercury grades your application's performance:
+## Philosophy
 
-| Grade | Score | Meaning |
-|-------|-------|---------|
-| **S** | 100 | Perfect performance |
-| **A+** | 95-99 | Excellent |
-| **A** | 90-94 | Very good |
-| **B** | 80-89 | Good |
-| **C** | 70-79 | Acceptable |
-| **D** | 60-69 | Poor |
-| **F** | <60 | Failing |
+**Mercury follows the 80-20 Human-in-the-Loop principle:**
 
-## 🛠️ CI/CD Integration
+- **80% automation:** Detect issues, measure metrics, normalize SQL
+- **20% human control:** Understand problems, make decisions, fix code
 
-```yaml
-# .github/workflows/performance.yml
-name: Performance Tests
+**We believe:**
+- Tools should teach, not just detect
+- Automation should preserve understanding
+- Performance testing should be accessible to all skill levels
 
-on: [push, pull_request]
+Part of the [80-20 Human-in-the-Loop](https://github.com/80-20-Human-In-The-Loop) ecosystem.
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Mercury Tests
-        run: |
-          pip install django-mercury-performance
-          mercury-test --profile agent --export-metrics=json
-      - name: Check Performance
-        run: |
-          python -c "import json; exit(0 if json.load(open('metrics.json'))['grade'] >= 'B' else 1)"
-```
-
-## 📚 Documentation
-
-- **[Quick Start Guide](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Quick-Start)** - Get running in 5 minutes
-- **[Educational Mode](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Educational-Mode)** - Learn performance optimization
-- **[Understanding Reports](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Understanding-Reports)** - Interpret Mercury's output
-- **[Plugin System](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Why-Plugins)** - Extend Mercury's capabilities
-- **[API Reference](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/API-Reference)** - Complete API documentation
-
-## 🤝 Contributing
-
-Mercury is part of the [80-20 Human-in-the-Loop](https://github.com/80-20-Human-In-The-Loop) ecosystem. We welcome contributions from everyone!
-
-### Our Values
-- **Education First**: Tools should teach, not just detect
-- **Human Understanding**: Preserve human decision-making
-- **Open Community**: Built together, shared freely
-
-### How to Contribute
-1. **Use Mercury** - Test it on your projects
-2. **Report Issues** - Help us improve
-3. **Share Knowledge** - Write tutorials, create quizzes
-4. **Code** - Fix bugs, add features
-5. **Translate** - Make Mercury accessible globally
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## 🚧 Roadmap
-
-### Current (v1.0)
-- ✅ Three-audience plugin system
-- ✅ Educational mode with quizzes
-- ✅ Performance grading system
-- ✅ N+1 detection
-- ✅ Smart project discovery
-
-### Next (v1.1)
-- 🔨 MCP server for AI integration
-- 🔨 Performance trend tracking
-- 🔨 Custom plugin API
-- 🔨 More educational content
-
-### Future (v2.0)
-- 🤖 AI-assisted optimization
-- 🤖 Auto-fix for simple issues
-- 🤖 Performance prediction
-- 🤖 Team learning features
-
-## 📄 License
+## License
 
 GNU General Public License v3.0 (GPL-3.0)
 
 We chose GPL to ensure Mercury remains:
-- **Free** - No barriers to learning
-- **Open** - Transparent development
-- **Fair** - Improvements benefit everyone
+- **Free** - No cost barriers to learning
+- **Open** - Transparent development and review
+- **Fair** - Improvements benefit the entire community
 
-## 🙏 Acknowledgments
+See [LICENSE](LICENSE) for full text.
 
-- **[EduLite](https://github.com/ibrahim-sisar/EduLite)** - Where Mercury was born
-- **[80-20 Human-in-the-Loop](https://github.com/80-20-Human-In-The-Loop)** - For the philosophy
-- **Django Community** - For the amazing framework
-- **You** - For making Django apps faster!
+## FAQ
+
+**Q: Do I need to configure anything?**
+A: No. Mercury works with sensible defaults. Configure only when you need stricter/looser thresholds.
+
+**Q: Does it work with pytest?**
+A: Yes. Mercury works with any test runner - it's just a context manager.
+
+**Q: What's the performance overhead?**
+A: Minimal. Django's `CaptureQueriesContext` is already optimized. SQL normalization adds ~1ms per 100 queries.
+
+**Q: Can I use this in production?**
+A: Mercury is designed for tests, not production monitoring. Use Django Debug Toolbar or APM tools for production.
+
+**Q: Does it work with async views?**
+A: Not yet. Async support is planned for v0.2.0.
+
+**Q: Can I customize the report format?**
+A: Yes. Use `result.to_dict()` and format however you want. Custom formatters can be contributed as plugins.
+
+## Roadmap
+
+### v0.1.0 (Current - MVP)
+- ✅ Context manager monitoring
+- ✅ N+1 query detection
+- ✅ 4-layer configuration
+- ✅ Comprehensive test suite
+
+### v0.2.0 (Next)
+- 🔨 Async view support
+- 🔨 Custom formatters API
+- 🔨 Performance trend tracking
+- 🔨 Memory profiling
+
+### v1.0.0 (Future)
+- 🤖 CLI with test discovery
+- 🤖 Educational mode with explanations
+- 🤖 Plugin system for extensibility
+- 🤖 MCP server for AI integration
+
+## Acknowledgments
+
+- **Django Community** - For the incredible framework
+- **EduLite Project** - Where Mercury was born
+- **80-20 Human-in-the-Loop** - For the guiding philosophy
+- **Contributors** - Thank you for making Mercury better!
 
 ---
 
 <div align="center">
 
-**Mercury: Making performance testing educational, accessible, and effective.**
+**Django Mercury: Simple, powerful performance testing.**
 
-*Because every developer deserves to understand their code's performance.*
+*Because every Django developer deserves fast, understandable applications.*
 
-[Get Started](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki/Quick-Start) • [Documentation](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki) • [Community](https://github.com/80-20-Human-In-The-Loop/Community)
+[Get Started](#quick-start) • [Documentation](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki) • [Contributing](CONTRIBUTING.md)
 
 </div>

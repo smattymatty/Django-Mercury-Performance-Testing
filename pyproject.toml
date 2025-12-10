@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-mercury-performance"
-version = "0.1.0"
+version = "0.1.1b1"
 description = "A performance testing framework for Django that helps you understand and fix performance issues, not just detect them"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
@@ -99,7 +99,7 @@ mercury-test = "django_mercury.cli.mercury_test:main"
 
 
 [tool.setuptools]
-packages = []  # Will add as we build
+packages = ["django_mercury"]
 include-package-data = true
 
 [tool.black]
