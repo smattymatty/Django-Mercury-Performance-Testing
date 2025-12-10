@@ -239,6 +239,12 @@ def monitor(**inline_overrides: Any) -> Iterator[MonitorResult]:
     # Check thresholds
     _check_thresholds(result)
 
+    # Record result for summary (if test name was captured)
+    if result.test_name:
+        from .summary import MercurySummaryTracker
+
+        MercurySummaryTracker.instance().add_result(result.test_name, result)
+
     # Raise if failures (with full report embedded)
     if result.failures:
         report = _format_report(result)
