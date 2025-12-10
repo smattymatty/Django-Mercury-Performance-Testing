@@ -15,7 +15,7 @@ with monitor(response_time=100) as result:
 # Automatic threshold checking - raises AssertionError on violations
 ```
 
-The monitor created a new test case under the hood, failing it looks like:
+The monitor either succeeds or fails:
 
 ```sh
 ============================================================
@@ -42,7 +42,7 @@ MERCURY PERFORMANCE REPORT
 
 ```python
 with monitor(response_time_ms=10, query_count=5) as result:
-            response = self.client.get('/api/v1/auth/tokens/')
+            response = self.client.get('/api/v1/auth/me/')
 result.explain() # print what the monitor found
 ```
 
@@ -57,8 +57,8 @@ MERCURY PERFORMANCE REPORT
 📍 Location: accounts/tests/mercury/test_auth_performance.py:32
 
 📊 METRICS:
-   Response time: 6.86ms (threshold: 50.00ms)
-   Query count:   3 (threshold: 10)
+   Response time: 6.86ms (threshold: 10.00ms)
+   Query count:   3 (threshold: 5)
 
 ✅ No N+1 patterns detected
 
@@ -221,6 +221,24 @@ MERCURY_PERFORMANCE_THRESHOLDS = {
 2. **File-level:** `MERCURY_PERFORMANCE_THRESHOLDS` in test module
 3. **Django settings:** `settings.MERCURY_PERFORMANCE_THRESHOLDS`
 4. **Defaults:** Built-in sensible values
+
+### Disabling Colors
+
+Mercury uses ANSI colors for professional terminal output. To disable colors (useful for CI/CD logs):
+
+```bash
+# Standard NO_COLOR environment variable (https://no-color.org/)
+NO_COLOR=1 python -m unittest tests/
+
+# Or Mercury-specific
+MERCURY_NO_COLOR=1 python manage.py test
+
+# In GitHub Actions
+env:
+  NO_COLOR: 1
+```
+
+When colors are disabled, you get clean plain text output perfect for log parsing.
 
 ## Advanced Usage
 

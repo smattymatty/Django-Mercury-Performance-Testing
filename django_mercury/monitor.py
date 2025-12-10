@@ -271,7 +271,7 @@ def _check_thresholds(result: MonitorResult) -> None:
     if result.response_time_ms > thresholds["response_time_ms"]:
         over = result.response_time_ms - thresholds["response_time_ms"]
         result.failures.append(
-            f"⏱️  Response time {result.response_time_ms:.2f}ms "
+            f"Response time {result.response_time_ms:.2f}ms "
             f"exceeded threshold {thresholds['response_time_ms']}ms "
             f"(+{over:.2f}ms over)"
         )
@@ -280,7 +280,7 @@ def _check_thresholds(result: MonitorResult) -> None:
     if result.query_count > thresholds["query_count"]:
         over = result.query_count - thresholds["query_count"]
         result.failures.append(
-            f"🔢 Query count {result.query_count} "
+            f"Query count {result.query_count} "
             f"exceeded threshold {thresholds['query_count']} "
             f"(+{over} extra queries)"
         )
@@ -297,7 +297,7 @@ def _check_thresholds(result: MonitorResult) -> None:
                 f"      → {_truncate_sql(q, 70)}" for q in pattern.sample_queries[:3]
             )
             result.failures.append(
-                f"🔄 N+1 pattern detected: {pattern.count} similar queries "
+                f"N+1 pattern detected: {pattern.count} similar queries "
                 f"(threshold: {n1_threshold})\n"
                 f"   Pattern: {_truncate_sql(pattern.normalized_query, 80)}\n"
                 f"   Examples:\n{examples}"
@@ -305,7 +305,7 @@ def _check_thresholds(result: MonitorResult) -> None:
         elif pattern.count >= warn_threshold:
             # Severity 2: Warning (80% of threshold - approaching failure)
             result.warnings.append(
-                f"⚠️  N+1 WARNING: {pattern.count} similar queries detected "
+                f"N+1 WARNING: {pattern.count} similar queries detected "
                 f"(approaching threshold: {n1_threshold})\n"
                 f"   Pattern: {_truncate_sql(pattern.normalized_query, 80)}\n"
                 f"   Consider using select_related() or prefetch_related()"
@@ -313,81 +313,123 @@ def _check_thresholds(result: MonitorResult) -> None:
         elif pattern.count >= notice_threshold:
             # Severity 3: Notice (50% of threshold - informational)
             result.warnings.append(
-                f"ℹ️  N+1 notice: {pattern.count} similar queries\n"
+                f"N+1 notice: {pattern.count} similar queries\n"
                 f"   Pattern: {_truncate_sql(pattern.normalized_query, 80)}"
             )
 
 
+# ANSI color codes for professional terminal output
+class Colors:
+    """ANSI escape codes for terminal colors.
+
+    Respects NO_COLOR environment variable (https://no-color.org/).
+    Set NO_COLOR=1 or MERCURY_NO_COLOR=1 to disable colors.
+    """
+    _DISABLED = os.getenv('NO_COLOR') or os.getenv('MERCURY_NO_COLOR')
+
+    RESET = "" if _DISABLED else "\033[0m"
+    BOLD = "" if _DISABLED else "\033[1m"
+    DIM = "" if _DISABLED else "\033[2m"
+
+    # Status colors
+    GREEN = "" if _DISABLED else "\033[32m"
+    YELLOW = "" if _DISABLED else "\033[33m"
+    RED = "" if _DISABLED else "\033[31m"
+    BLUE = "" if _DISABLED else "\033[34m"
+    CYAN = "" if _DISABLED else "\033[36m"
+    MAGENTA = "" if _DISABLED else "\033[35m"
+
+    # Bright variants
+    BRIGHT_GREEN = "" if _DISABLED else "\033[92m"
+    BRIGHT_YELLOW = "" if _DISABLED else "\033[93m"
+    BRIGHT_RED = "" if _DISABLED else "\033[91m"
+    BRIGHT_BLUE = "" if _DISABLED else "\033[94m"
+    BRIGHT_CYAN = "" if _DISABLED else "\033[96m"
+
+
 def _format_report(result: MonitorResult) -> str:
-    """Format a detailed performance report.
+    """Format a detailed performance report with ANSI colors.
 
     Args:
         result: MonitorResult with all fields populated
 
     Returns:
-        Formatted multi-line string report
+        Formatted multi-line string report with ANSI color codes
     """
     lines = []
-    lines.append("\n" + "=" * 60)
-    lines.append("MERCURY PERFORMANCE REPORT")
-    lines.append("=" * 60)
+    c = Colors
+
+    # Header
+    lines.append(f"\n{c.BOLD}{'=' * 60}{c.RESET}")
+    lines.append(f"{c.BOLD}{c.CYAN}MERCURY PERFORMANCE REPORT{c.RESET}")
+    lines.append(f"{c.BOLD}{'=' * 60}{c.RESET}")
 
     # Test context (if available)
     if result.test_name or result.test_location:
         lines.append("")
         if result.test_name:
-            lines.append(f"🧪 Test: {result.test_name}")
+            lines.append(f"{c.BLUE}Test:{c.RESET} {result.test_name}")
         if result.test_location:
-            lines.append(f"📍 Location: {result.test_location}")
+            lines.append(f"{c.DIM}Location:{c.RESET} {c.CYAN}{result.test_location}{c.RESET}")
 
     # Metrics section
-    lines.append("\n📊 METRICS:")
+    lines.append(f"\n{c.BOLD}METRICS:{c.RESET}")
+
+    # Response time with color based on threshold
+    time_color = c.GREEN if result.response_time_ms <= result.thresholds['response_time_ms'] else c.RED
     lines.append(
-        f"   Response time: {_format_duration(result.response_time_ms)} "
-        f"(threshold: {_format_duration(result.thresholds['response_time_ms'])})"
+        f"   Response time: {time_color}{_format_duration(result.response_time_ms)}{c.RESET} "
+        f"{c.DIM}(threshold: {_format_duration(result.thresholds['response_time_ms'])}){c.RESET}"
     )
+
+    # Query count with color based on threshold
+    query_color = c.GREEN if result.query_count <= result.thresholds['query_count'] else c.RED
     lines.append(
-        f"   Query count:   {result.query_count} "
-        f"(threshold: {result.thresholds['query_count']})"
+        f"   Query count:   {query_color}{result.query_count}{c.RESET} "
+        f"{c.DIM}(threshold: {result.thresholds['query_count']}){c.RESET}"
     )
 
     # N+1 patterns section
     if result.n_plus_one_patterns:
-        lines.append("\n🔄 N+1 PATTERNS DETECTED:")
+        lines.append(f"\n{c.BOLD}{c.YELLOW}N+1 PATTERNS DETECTED:{c.RESET}")
         for pattern in result.n_plus_one_patterns:
-            severity = _format_pattern_severity(
+            severity_label, severity_color = _format_pattern_severity_color(
                 pattern.count, result.thresholds["n_plus_one_threshold"]
             )
             lines.append(
-                f"   {severity} [{pattern.count}x] "
-                f"{_truncate_sql(pattern.normalized_query, 70)}"
+                f"   {severity_color}{severity_label}{c.RESET} [{pattern.count}x] "
+                f"{c.DIM}{_truncate_sql(pattern.normalized_query, 70)}{c.RESET}"
             )
             for sample in pattern.sample_queries[:3]:
-                lines.append(f"        → {_truncate_sql(sample, 65)}")
+                lines.append(f"      {c.DIM}→ {_truncate_sql(sample, 65)}{c.RESET}")
     else:
-        lines.append("\n✅ No N+1 patterns detected")
+        lines.append(f"\n{c.GREEN}✓{c.RESET} No N+1 patterns detected")
 
     # Warnings section
     if result.warnings:
-        lines.append("\n⚠️  WARNINGS:")
+        lines.append(f"\n{c.BOLD}{c.YELLOW}WARNINGS:{c.RESET}")
         for warning in result.warnings:
             # Indent multi-line warnings
             for line in warning.split("\n"):
-                lines.append(f"   {line}")
+                # Remove emoji prefixes from old format
+                line = line.replace("⚠️", "").replace("ℹ️", "").strip()
+                lines.append(f"   {c.YELLOW}•{c.RESET} {line}")
 
     # Failures section
     if result.failures:
-        lines.append("\n❌ FAILURES:")
+        lines.append(f"\n{c.BOLD}{c.RED}FAILURES:{c.RESET}")
         for failure in result.failures:
             # Indent multi-line failures
             for line in failure.split("\n"):
-                lines.append(f"   {line}")
+                # Remove emoji prefixes from old format
+                line = line.replace("⏱️", "").replace("🔢", "").replace("🔄", "").strip()
+                lines.append(f"   {c.RED}✗{c.RESET} {line}")
 
     # Config source
     if result.used_defaults:
-        lines.append("\n⚙️  Using default thresholds (no config found)")
+        lines.append(f"\n{c.DIM}Using default thresholds (no config found){c.RESET}")
 
-    lines.append("\n" + "=" * 60 + "\n")
+    lines.append(f"{c.BOLD}{'=' * 60}{c.RESET}\n")
     return "\n".join(lines)
 
 
@@ -424,7 +466,7 @@ def _truncate_sql(sql: str, max_length: int) -> str:
 
 
 def _format_pattern_severity(count: int, threshold: int) -> str:
-    """Format N+1 pattern severity with emoji.
+    """Format N+1 pattern severity (deprecated - use _format_pattern_severity_color).
 
     Args:
         count: Number of similar queries
@@ -435,7 +477,26 @@ def _format_pattern_severity(count: int, threshold: int) -> str:
     """
     if count >= threshold:
         return "❌ FAIL"
-    elif count >= 5:
+    elif count >= int(threshold * 0.8):
         return "⚠️  WARN"
     else:
         return "ℹ️  INFO"
+
+
+def _format_pattern_severity_color(count: int, threshold: int) -> tuple:
+    """Format N+1 pattern severity with ANSI color.
+
+    Args:
+        count: Number of similar queries
+        threshold: N+1 failure threshold
+
+    Returns:
+        Tuple of (label, color_code) for professional terminal output
+    """
+    c = Colors
+    if count >= threshold:
+        return ("FAIL", c.RED)
+    elif count >= int(threshold * 0.8):
+        return ("WARN", c.YELLOW)
+    else:
+        return ("INFO", c.BLUE)

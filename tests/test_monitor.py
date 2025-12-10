@@ -264,14 +264,15 @@ class FormatPatternSeverityTests(unittest.TestCase):
         self.assertEqual(_format_pattern_severity(15, 10), "❌ FAIL")
 
     def test_format_severity_warning(self):
-        """Should format warning for count >= 5 but < threshold."""
-        self.assertEqual(_format_pattern_severity(5, 10), "⚠️  WARN")
-        self.assertEqual(_format_pattern_severity(7, 10), "⚠️  WARN")
+        """Should format warning for count >= 80% threshold."""
+        self.assertEqual(_format_pattern_severity(8, 10), "⚠️  WARN")  # 80% of 10
+        self.assertEqual(_format_pattern_severity(9, 10), "⚠️  WARN")
 
     def test_format_severity_info(self):
-        """Should format info for count < 5."""
+        """Should format info for count < 80% threshold."""
         self.assertEqual(_format_pattern_severity(3, 10), "ℹ️  INFO")
-        self.assertEqual(_format_pattern_severity(4, 10), "ℹ️  INFO")
+        self.assertEqual(_format_pattern_severity(5, 10), "ℹ️  INFO")
+        self.assertEqual(_format_pattern_severity(7, 10), "ℹ️  INFO")
 
 
 class FormatReportTests(unittest.TestCase):
