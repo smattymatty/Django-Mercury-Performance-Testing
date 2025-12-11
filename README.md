@@ -282,12 +282,6 @@ Add `'django_mercury'` to `INSTALLED_APPS` to unlock the management command:
 python manage.py mercury_test
 ```
 
-**How it works:**
-1. Scans project for `test_*.py` files
-2. AST-parses to find `from django_mercury import monitor`
-3. Finds test methods with `with monitor()` context manager
-4. Runs only those tests (skips non-performance tests)
-
 **Example output:**
 ```
 Discovering Mercury performance tests...
@@ -342,12 +336,6 @@ python manage.py mercury_test --no-discover
 python manage.py mercury_test --verbosity=2
 ```
 
-**Benefits:**
-- **Fast:** Only runs performance tests, skips everything else
-- **Smart:** AST-based detection finds actual `monitor()` usage
-- **Automatic:** No manual test labels or file paths needed
-- **Summary:** Shows aggregated stats and slowest tests at the end
-
 ### End-of-Run Summary
 
 Mercury automatically tracks all monitored tests and prints a summary on exit:
@@ -382,59 +370,6 @@ python manage.py mercury_test --html performance_report.html
 # Combine with other options
 python manage.py mercury_test myapp.tests --html report.html --keepdb
 ```
-
-**HTML Report Features:**
-- 📊 **Dashboard** with test statistics (total, pass/fail %, averages)
-- 🐌 **Slowest Tests** section highlighting performance bottlenecks
-- 🔄 **N+1 Patterns Aggregated** across all tests - find systemic issues
-- 📋 **All Test Results** with expandable details (click to see full metrics)
-- 🎨 **Color-coded** pass/fail indicators for quick scanning
-- 📱 **Responsive Design** - works on desktop and mobile
-- 📦 **Standalone File** - no external dependencies, just open in browser
-
-**Example Report Sections:**
-
-```
-⚡ Mercury Performance Test Summary
-Generated: 2025-12-10 14:30:22
-
-┌─────────────────────────────────────────────────┐
-│ Total Tests: 15                                 │
-│ Passed: 13 (87%)  ████████████░░  87%          │
-│ Failed: 2 (13%)   ██░░░░░░░░░░░░  13%          │
-│ Avg Response Time: 145.3ms                      │
-│ Avg Query Count: 8.5                            │
-└─────────────────────────────────────────────────┘
-
-🐌 Slowest Tests (Top 10)
-✗ test_user_list_with_joins - 567.25ms (11 queries, N+1)
-✓ test_dashboard_load - 234.12ms (45 queries)
-✓ test_search_autocomplete - 189.45ms (8 queries)
-...
-
-🔄 N+1 Query Patterns (Aggregated)
-Found 3 unique pattern(s) across all tests
-
-❌ 45x occurrences across 3 test(s)
-   SELECT * FROM "auth_user" WHERE "id" = ?
-
-   Affected tests:
-   • TestUserAPI.test_list_users
-   • TestDashboard.test_load
-   • TestPerformance.test_bulk_fetch
-
-📋 All Test Results (15 tests)
-► ✓ TestUserAPI.test_login - 45ms, 3 queries
-   [Click to expand full details...]
-► ✗ TestUserAPI.test_list - 567ms, 11 queries, N+1
-   [Click to expand full details...]
-```
-
-**Sharing Reports:**
-- 📧 Email to stakeholders or team members
-- 🔗 Attach to PRs/issues for performance reviews
-- 📚 Archive for historical comparison and trends
-- 🌐 Open directly in any web browser (Chrome, Firefox, Safari)
 
 **Individual Test Export:**
 
@@ -492,22 +427,6 @@ except AssertionError as e:
     # Decide what to do...
 ```
 
-## Architecture
-
-Mercury follows SOLID principles with clean separation of concerns:
-
-**Core Modules:**
-- `monitor.py` - Context manager orchestration
-- `config.py` - 4-layer threshold resolution
-- `n_plus_one.py` - SQL normalization and pattern detection
-
-**Design Principles:**
-- **Pure functions** for easy testing
-- **Immutable dataclasses** for results
-- **No side effects** except Django query capture
-- **Type hints** throughout
-- **Zero dependencies** beyond Django
-
 ## Real-World Example
 
 ```python
@@ -543,45 +462,9 @@ class UserAPIPerformanceTest(TestCase):
         # ✅ Passes threshold checks
 ```
 
-## Testing Mercury Itself
-
-Mercury has comprehensive test coverage:
-
-```bash
-# Run all tests
-python -m unittest discover tests
-
-# Run specific test module
-python -m unittest tests.test_monitor
-
-# With coverage
-coverage run -m unittest discover tests
-coverage report
-```
-
-**Current test suite:**
-- 46 tests covering all core functionality
-- Unit tests for pure functions
-- Integration tests for Django components
-- Edge case validation
-
 ## Contributing
 
 We welcome contributions! Mercury is designed for extensibility:
-
-### Project Structure
-```
-django_mercury/
-├── __init__.py          # Public API exports
-├── monitor.py           # Main context manager (400 lines)
-├── config.py            # Threshold resolution (78 lines)
-└── n_plus_one.py        # Pattern detection (96 lines)
-
-tests/
-├── test_monitor.py      # Monitor tests (27 tests)
-├── test_config.py       # Config tests (5 tests)
-└── test_n_plus_one.py   # N+1 tests (9 tests)
-```
 
 ### Development Setup
 ```bash
@@ -607,20 +490,6 @@ isort django_mercury tests --profile black
 - **Tests** for all new functionality
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## Philosophy
-
-**Mercury follows the 80-20 Human-in-the-Loop principle:**
-
-- **80% automation:** Detect issues, measure metrics, normalize SQL
-- **20% human control:** Understand problems, make decisions, fix code
-
-**We believe:**
-- Tools should teach, not just detect
-- Automation should preserve understanding
-- Performance testing should be accessible to all skill levels
-
-Part of the [80-20 Human-in-the-Loop](https://github.com/80-20-Human-In-The-Loop) ecosystem.
 
 ## License
 
@@ -652,42 +521,3 @@ A: Not yet. Async support is planned for v0.2.0.
 
 **Q: Can I customize the report format?**
 A: Yes. Use `result.to_dict()` and format however you want. Custom formatters can be contributed as plugins.
-
-## Roadmap
-
-### v0.1.0 (Current - MVP)
-- ✅ Context manager monitoring
-- ✅ N+1 query detection
-- ✅ 4-layer configuration
-- ✅ Comprehensive test suite
-
-### v0.2.0 (Next)
-- 🔨 Async view support
-- 🔨 Custom formatters API
-- 🔨 Performance trend tracking
-- 🔨 Memory profiling
-
-### v1.0.0 (Future)
-- 🤖 CLI with test discovery
-- 🤖 Educational mode with explanations
-- 🤖 Plugin system for extensibility
-- 🤖 MCP server for AI integration
-
-## Acknowledgments
-
-- **Django Community** - For the incredible framework
-- **EduLite Project** - Where Mercury was born
-- **80-20 Human-in-the-Loop** - For the guiding philosophy
-- **Contributors** - Thank you for making Mercury better!
-
----
-
-<div align="center">
-
-**Django Mercury: Simple, powerful performance testing.**
-
-*Because every Django developer deserves fast, understandable applications.*
-
-[Get Started](#quick-start) • [Documentation](https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki) • [Contributing](CONTRIBUTING.md)
-
-</div>
