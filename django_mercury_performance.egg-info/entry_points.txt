@@ -1,0 +1,2 @@
+[console_scripts]
+mercury-test = django_mercury.cli.mercury_test:main

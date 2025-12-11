@@ -118,6 +118,33 @@ class MonitorResult:
             "test_location": self.test_location,
         }
 
+    def to_html(self, filename: str) -> None:
+        """Export performance report to standalone HTML file.
+
+        Generates a beautiful, standalone HTML report with inline CSS
+        that can be easily shared with team members or stakeholders.
+
+        Args:
+            filename: Path to output HTML file (e.g., 'report.html')
+
+        Example:
+            with monitor() as result:
+                response = self.client.get('/api/users/')
+
+            # Export to HTML
+            result.to_html('performance_report.html')
+
+        The generated HTML file includes:
+        - Color-coded pass/fail status
+        - Detailed metrics with thresholds
+        - N+1 pattern detection with SQL samples
+        - Warnings and failures
+        - Fully self-contained (no external dependencies)
+        """
+        from .export import export_html
+
+        export_html(self, filename)
+
 
 @contextmanager
 def monitor(**inline_overrides: Any) -> Iterator[MonitorResult]:
@@ -330,8 +357,18 @@ class Colors:
 
     Respects NO_COLOR environment variable (https://no-color.org/).
     Set NO_COLOR=1 or MERCURY_NO_COLOR=1 to disable colors.
+
+    Note: Setting to '0' will NOT disable colors (must be truthy: 1, true, yes, on)
     """
-    _DISABLED = os.getenv('NO_COLOR') or os.getenv('MERCURY_NO_COLOR')
+    # Check for NO_COLOR with proper truthy value parsing
+    _no_color = os.getenv('NO_COLOR', '').lower()
+    _mercury_no_color = os.getenv('MERCURY_NO_COLOR', '').lower()
+    _DISABLED = _no_color in ('1', 'true', 'yes', 'on') or _mercury_no_color in (
+        '1',
+        'true',
+        'yes',
+        'on',
+    )
 
     RESET = "" if _DISABLED else "\033[0m"
     BOLD = "" if _DISABLED else "\033[1m"

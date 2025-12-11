@@ -42,14 +42,36 @@ class MercurySummaryTracker:
         """
         self.results.append((test_name, result))
 
+    def export_html(self, filename: str) -> None:
+        """Export all collected results to HTML report.
+
+        Args:
+            filename: Output HTML file path
+
+        Example:
+            from django_mercury.summary import MercurySummaryTracker
+            tracker = MercurySummaryTracker.instance()
+            tracker.export_html('performance_report.html')
+        """
+        from .export import export_summary_html
+
+        export_summary_html(self.results, filename)
+
     def print_summary(self):
         """Print summary report at program exit.
 
         Skipped if:
         - No results collected
-        - MERCURY_NO_SUMMARY environment variable is set
+        - MERCURY_NO_SUMMARY=1 (or 'true', 'yes', 'on')
+
+        Note: MERCURY_NO_SUMMARY=0 will NOT disable (must be explicitly truthy)
         """
-        if not self.results or os.getenv('MERCURY_NO_SUMMARY'):
+        if not self.results:
+            return
+
+        # Check if summary is disabled (must be explicitly truthy value)
+        no_summary = os.getenv('MERCURY_NO_SUMMARY', '').lower()
+        if no_summary in ('1', 'true', 'yes', 'on'):
             return
 
         # Import Colors here to respect NO_COLOR env var at runtime

@@ -1,3 +1,69 @@
+Metadata-Version: 2.4
+Name: django-mercury-performance
+Version: 0.1.1b4
+Summary: A performance testing framework for Django that helps you understand and fix performance issues, not just detect them
+Author-email: Django Mercury Team <mathewstormdev@gmail.com>
+Maintainer-email: Mathew Storm <mathewstormdev@gmail.com>
+License: GPL-3.0-or-later
+Project-URL: Homepage, https://pypi.org/project/django-mercury-performance/
+Project-URL: Documentation, https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/wiki
+Project-URL: Repository, https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing
+Project-URL: Bug Tracker, https://github.com/80-20-Human-In-The-Loop/Django-Mercury-Performance-Testing/issues
+Project-URL: Changelog, https://github.com/Django-Mercury/Performance-Testing/blob/main/CHANGELOG.md
+Keywords: django,performance,testing,monitoring,optimization,n+1,queries,profiling,mercury,rest-framework,api,benchmarking
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
+Classifier: Framework :: Django
+Classifier: Framework :: Django :: 5.0
+Classifier: Framework :: Django :: 5.1
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Software Development :: Testing
+Classifier: Topic :: Software Development :: Testing :: Unit
+Classifier: Topic :: Software Development :: Quality Assurance
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: Django<6.0,>=3.2
+Requires-Dist: djangorestframework>=3.12.0
+Requires-Dist: psutil>=5.8.0
+Requires-Dist: memory-profiler>=0.60.0
+Requires-Dist: colorlog>=6.6.0
+Requires-Dist: jsonschema>=4.0.0
+Requires-Dist: toml>=0.10.2
+Requires-Dist: rich>=12.0.0
+Provides-Extra: rich
+Requires-Dist: rich>=12.0.0; extra == "rich"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=3.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: isort>=5.10.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: django-stubs[compatible-mypy]>=4.2.0; extra == "dev"
+Requires-Dist: djangorestframework-stubs>=3.14.0; extra == "dev"
+Requires-Dist: types-psutil>=5.9.0; extra == "dev"
+Requires-Dist: rich>=12.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: coverage>=6.0.0; extra == "dev"
+Requires-Dist: twine>=5.0.0; extra == "dev"
+Requires-Dist: setuptools>=70.0; extra == "dev"
+Requires-Dist: build>=1.0.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=4.5.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0.0; extra == "docs"
+Provides-Extra: debug
+Requires-Dist: django-debug-toolbar>=3.2.0; extra == "debug"
+Requires-Dist: django-silk>=4.3.0; extra == "debug"
+Dynamic: license-file
+
 # Django Mercury Performance Testing
 
 [![PyPI version](https://badge.fury.io/py/django-mercury-performance.svg)](https://badge.fury.io/py/django-mercury-performance)
@@ -79,39 +145,6 @@ No failure - but still useful information to help you understand your project, a
 
 ```bash
 pip install django-mercury-performance
-```
-
-### Two Usage Modes
-
-**Minimal (context manager only):**
-```python
-# Just pip install - no setup needed
-from django_mercury import monitor
-
-with monitor() as result:
-    response = self.client.get('/api/users/')
-```
-
-**Full features (management command, future admin, etc.):**
-```python
-# Add to settings.py
-INSTALLED_APPS = [
-    ...
-    'django_mercury',  # Enables management commands
-    ...
-]
-```
-
-Then use the smart test discovery command:
-```bash
-# Only runs tests that use monitor()
-python manage.py mercury_test
-
-# Run specific app
-python manage.py mercury_test myapp
-
-# See what would run (dry run)
-python manage.py mercury_test --verbosity=2
 ```
 
 ## Quick Start
@@ -272,181 +305,6 @@ env:
 ```
 
 When colors are disabled, you get clean plain text output perfect for log parsing.
-
-### Smart Test Discovery (Management Command)
-
-Add `'django_mercury'` to `INSTALLED_APPS` to unlock the management command:
-
-```bash
-# Auto-discovers and runs only tests using monitor()
-python manage.py mercury_test
-```
-
-**How it works:**
-1. Scans project for `test_*.py` files
-2. AST-parses to find `from django_mercury import monitor`
-3. Finds test methods with `with monitor()` context manager
-4. Runs only those tests (skips non-performance tests)
-
-**Example output:**
-```
-Discovering Mercury performance tests...
-
-Found 3 file(s) with 8 Mercury test(s):
-  ✓ accounts/tests/test_auth_performance.py (2 tests)
-  ✓ api/tests/test_user_endpoints.py (5 tests)
-  ✓ dashboard/tests/test_views.py (1 test)
-
-Running 8 Mercury performance tests...
-[... individual test reports ...]
-
-================================================================================
-MERCURY SUMMARY
-================================================================================
-
-Total tests monitored: 8
-Passed: 7 (88%)  Failed: 1 (12%)
-
-Slowest tests:
-  1. test_user_list_with_joins - 567.25ms (11 queries)
-  2. test_dashboard_load - 234.12ms (45 queries, N+1)
-  3. test_search_autocomplete - 189.45ms (8 queries)
-
-Top issues:
-  • 1 test with N+1 patterns
-  • 1 test exceeded response time threshold
-
-Average metrics:
-  Response time: 145.32ms (median: 89.11ms)
-  Query count: 8.5 (median: 7)
-
-To disable this summary: export MERCURY_NO_SUMMARY=1
-================================================================================
-```
-
-**Options:**
-```bash
-# Filter by app
-python manage.py mercury_test myapp
-
-# Filter by test file
-python manage.py mercury_test myapp.tests.test_api
-
-# Preserve test database
-python manage.py mercury_test --keepdb
-
-# Skip smart discovery (run all tests)
-python manage.py mercury_test --no-discover
-
-# Adjust verbosity (0-3)
-python manage.py mercury_test --verbosity=2
-```
-
-**Benefits:**
-- **Fast:** Only runs performance tests, skips everything else
-- **Smart:** AST-based detection finds actual `monitor()` usage
-- **Automatic:** No manual test labels or file paths needed
-- **Summary:** Shows aggregated stats and slowest tests at the end
-
-### End-of-Run Summary
-
-Mercury automatically tracks all monitored tests and prints a summary on exit:
-
-```bash
-# Summary enabled by default
-python manage.py test
-
-# Disable summary
-MERCURY_NO_SUMMARY=1 python manage.py test
-```
-
-The summary shows:
-- Pass/fail counts and percentages
-- Top 5 slowest tests
-- Common issues (N+1 patterns, threshold violations)
-- Average and median metrics
-
-**Note:** Summary only appears when 1+ tests use `monitor()`.
-
-### HTML Report Export
-
-Generate beautiful, shareable HTML reports when using the management command:
-
-```bash
-# Auto-generate filename (mercury_report_TIMESTAMP.html)
-python manage.py mercury_test --html
-
-# Specify custom filename
-python manage.py mercury_test --html performance_report.html
-
-# Combine with other options
-python manage.py mercury_test myapp.tests --html report.html --keepdb
-```
-
-**HTML Report Features:**
-- 📊 **Dashboard** with test statistics (total, pass/fail %, averages)
-- 🐌 **Slowest Tests** section highlighting performance bottlenecks
-- 🔄 **N+1 Patterns Aggregated** across all tests - find systemic issues
-- 📋 **All Test Results** with expandable details (click to see full metrics)
-- 🎨 **Color-coded** pass/fail indicators for quick scanning
-- 📱 **Responsive Design** - works on desktop and mobile
-- 📦 **Standalone File** - no external dependencies, just open in browser
-
-**Example Report Sections:**
-
-```
-⚡ Mercury Performance Test Summary
-Generated: 2025-12-10 14:30:22
-
-┌─────────────────────────────────────────────────┐
-│ Total Tests: 15                                 │
-│ Passed: 13 (87%)  ████████████░░  87%          │
-│ Failed: 2 (13%)   ██░░░░░░░░░░░░  13%          │
-│ Avg Response Time: 145.3ms                      │
-│ Avg Query Count: 8.5                            │
-└─────────────────────────────────────────────────┘
-
-🐌 Slowest Tests (Top 10)
-✗ test_user_list_with_joins - 567.25ms (11 queries, N+1)
-✓ test_dashboard_load - 234.12ms (45 queries)
-✓ test_search_autocomplete - 189.45ms (8 queries)
-...
-
-🔄 N+1 Query Patterns (Aggregated)
-Found 3 unique pattern(s) across all tests
-
-❌ 45x occurrences across 3 test(s)
-   SELECT * FROM "auth_user" WHERE "id" = ?
-
-   Affected tests:
-   • TestUserAPI.test_list_users
-   • TestDashboard.test_load
-   • TestPerformance.test_bulk_fetch
-
-📋 All Test Results (15 tests)
-► ✓ TestUserAPI.test_login - 45ms, 3 queries
-   [Click to expand full details...]
-► ✗ TestUserAPI.test_list - 567ms, 11 queries, N+1
-   [Click to expand full details...]
-```
-
-**Sharing Reports:**
-- 📧 Email to stakeholders or team members
-- 🔗 Attach to PRs/issues for performance reviews
-- 📚 Archive for historical comparison and trends
-- 🌐 Open directly in any web browser (Chrome, Firefox, Safari)
-
-**Individual Test Export:**
-
-You can also export individual test results to HTML:
-
-```python
-with monitor() as result:
-    response = self.client.get('/api/users/')
-
-# Export single result
-result.to_html('single_test_report.html')
-```
 
 ## Advanced Usage
 
